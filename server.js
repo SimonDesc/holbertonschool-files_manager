@@ -1,6 +1,14 @@
+import bodyParser from 'body-parser';
+
 const express = require('express');
 
 const app = express();
+
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// parse application/json
+app.use(bodyParser.json());
 
 // Importation des routes depuis routes/index.js
 const routes = require('./routes/index');
