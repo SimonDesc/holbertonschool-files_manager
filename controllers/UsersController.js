@@ -1,5 +1,7 @@
 import dbClient from '../utils/db';
 
+const crypto = require('crypto');
+
 class UsersController {
   static async postNew(req, res) {
     // console.log(req.body)
@@ -10,11 +12,9 @@ class UsersController {
     // if the email already exists in DB, return an error Already exist with a status code 400
     const { usersCollection } = dbClient;
     const user = await usersCollection.findOne({ email });
-
     if (user) return res.status(400).send({ error: 'Already exist' });
 
     // The password must be stored after being hashed in SHA1
-    const crypto = require('crypto');
     const shasum = crypto.createHash('sha1');
     shasum.update(password);
     const hashedPassword = shasum.digest('hex');
@@ -22,7 +22,8 @@ class UsersController {
       email,
       password: hashedPassword,
     });
-    return res.status(201).send({ _id: newUser._id, email: newUser.email });
+    // console.log(newUser.insertedId, email);
+    return res.status(201).send({ id: newUser.insertedId, email });
   }
 }
 
