@@ -1,8 +1,8 @@
-import sha1 from 'sha1';
-import Queue from 'bull';
+import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 
-const userQueue = new Queue('userQueue');
+const crypto = require('crypto');
 
 class UsersController {
   static async postNew(req, res) {
@@ -16,32 +16,43 @@ class UsersController {
       return res.status(400).send({ error: 'Missing password' });
     }
 
-    const existEmail = await dbClient.usersCollection.findOne({ email });
+    const { usersCollection } = dbClient;
+    const user = await usersCollection.findOne({ email });
 
-    if (existEmail) {
+    if (user) {
       return res.status(400).send({ error: 'Already exist' });
     }
 
-    const passwordSha1 = sha1(password);
-
-    let returnResult;
-    try {
-      returnResult = await dbClient.usersCollection.insertOne({ email, password: passwordSha1 });
-    } catch (err) {
-      await userQueue.add({});
-      return res.status(500).send({ error: 'Error creating user' });
-    }
-
-    const user = {
-      id: returnResult.insertedId,
+    const hashedPassword = crypto.createHash('sha1').update(password).digest('hex');
+    const newUser = await usersCollection.insertOne({
       email,
-    };
-
-    await userQueue.add({
-      userId: returnResult.insertedId.toString(),
+      password: hashedPassword,
     });
 
-    return res.status(201).send(user);
+    return res.status(201).send({ id: newUser.insertedId, email });
+  }
+
+  static async getMe(req, res) {
+    const token = req.headers['x-token'];
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = await redisClient.get(`auth_${token}`);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const user = await dbClient.usersCollection.findOne({ _id: new ObjectId(userId) });
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      return res.status(200).json({ id: user._id, email: user.email });
+    } catch (error) {
+      return res.status(500).json({ error: 'Internal server error' });
+    }
   }
 }
 
