@@ -5,6 +5,7 @@ import redisClient from '../utils/redis';
 import fileQueue from '../worker';
 
 const { mkdir, writeFile } = fsPromises;
+const fs = require('fs');
 
 class FilesController {
   static async postUpload(request, response) {
@@ -17,7 +18,7 @@ class FilesController {
     }
 
     // On vérifie que le token est valide
-    console.log(userToken);
+    // console.log(userToken);
     const userId = await redisClient.getUserId(userToken);
     if (!userId) {
       response.status(401);
@@ -26,9 +27,9 @@ class FilesController {
     }
 
     // On récupère l'objet utilisateur
-    console.log('userId:', userId);
+    // console.log('userId:', userId);
     const userObject = await dbClient.userById(userId);
-    console.log('userobject:', userObject);
+    // console.log('userobject:', userObject);
     if (!userObject) {
       response.status(500);
       response.send({ error: 'Failed to get user from ID' });
@@ -83,14 +84,20 @@ class FilesController {
     }
 
     // Si notre fileObject n'est pas un dossier
+    // Donc image ou autre...
     if (fileObject.type !== 'folder') {
       // On définie le chemin d'enregistrement
       const fileDir = process.env.FOLDER_PATH || '/tmp/files_manager/';
       // console.log(`fileDir: ${fileDir}`);
+
       try {
+        // Supprimer le répertoire s'il existe déjà
+        if (fs.existsSync(fileDir)) {
+          await fsPromises.rm(fileDir, { recursive: true });
+        }
         await mkdir(fileDir);
       } catch (error) {
-        console.error('error mkdir:', error);
+        // console.error('error mkdir:', error);
       }
 
       // On l'ajoute à notre objet "fileObject"
@@ -107,7 +114,7 @@ class FilesController {
         // writefile(chemin, contenu du fichier)
         await writeFile(fileObject.localPath, fileContent);
       } catch (error) {
-        console.error('error writefile:', error);
+        // console.error('error writefile:', error);
         response.status(500);
         response.send({ error: 'Failed to add file' });
         return;
