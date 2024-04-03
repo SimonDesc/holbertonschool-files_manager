@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_PORT = process.env.DB_PORT || 27017;
@@ -22,10 +22,6 @@ class DBClient {
     });
   }
 
-  /**
-   * Checks if connection to Redis is Alive
-   * @return {boolean} true if connection alive or false if not
-   */
   isAlive() {
     if (this.db) {
       return true;
@@ -33,22 +29,66 @@ class DBClient {
     return false;
   }
 
-  /**
-   * Returns the number of documents in the collection users
-   * @return {number} amount of users
-   */
   async nbUsers() {
     const numberOfUsers = this.usersCollection.countDocuments();
     return numberOfUsers;
   }
 
-  /**
-   * Returns the number of documents in the collection files
-   * @return {number} amount of files
-   */
   async nbFiles() {
     const numberOfFiles = this.filesCollection.countDocuments();
     return numberOfFiles;
+  }
+
+  async userById(id) {
+    try {
+      const _id = ObjectId(id);
+
+      return await this.usersCollection.findOne({ _id });
+    } catch (error) {
+      // Gérer l'erreur ou retourner null / message d'erreur
+      console.error('Invalid ID format:', error);
+      return null;
+    }
+  }
+
+  async fileWithID(id) {
+    let _id;
+    try {
+      _id = ObjectId(id);
+    } catch (error) {
+      return null;
+    }
+    return this.filesCollection.findOne({ _id });
+  }
+
+  async addFile(file) {
+    return this.filesCollection.insertOne(file);
+  }
+
+  async findUserFile(userId, id) {
+    const query = {};
+
+    try {
+      query.userId = ObjectId(userId);
+      query._id = ObjectId(id);
+    } catch (error) {
+      return null;
+    }
+    return this.filesCollection.findOne(query);
+  }
+
+  async setFilePublic(userId, id, isPublic) {
+    const filter = {};
+    try {
+      filter.userId = ObjectId(userId);
+      filter._id = ObjectId(id);
+    } catch (error) {
+      /* I think it should be not found anyways */
+    }
+    return this.filesCollection.updateOne(
+      filter,
+      { $set: { isPublic } },
+    );
   }
 }
 

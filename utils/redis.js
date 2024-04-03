@@ -25,6 +25,12 @@ class RedisClient {
     return value;
   }
 
+  async getUserId(userSessionToken) {
+    // Utilisation de getAsync pour récupérer la valeur de manière asynchrone
+    const userId = await this.getAsync(`auth_${userSessionToken}`);
+    return userId;
+  }
+
   async set(key, value, duration) {
     this.client.setex(key, duration, value);
   }
