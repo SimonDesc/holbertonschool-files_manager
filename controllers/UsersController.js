@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 
@@ -31,35 +32,27 @@ class UsersController {
     return res.status(201).send({ id: newUser.insertedId, email });
   }
 
-  static async getMe(request, response) {
-    const userSessionToken = request.get('X-Token');
-    // console.log(userSessionToken);
-
-    if (typeof userSessionToken !== 'string') {
-      response.status(401);
-      response.send({ error: 'Unauthorized' });
-      return;
+  static async getMe(req, res) {
+    const token = req.headers['x-token'];
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const userId = await redisClient.getUserId(userSessionToken);
-    // console.log(`userId: ${userId}`);
-
-    if (typeof userId !== 'string') {
-      response.status(401);
-      response.send({ error: 'Unauthorized' });
-      return;
+    const userId = await redisClient.get(`auth_${token}`);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const userObject = await dbClient.userById(userId);
-    // console.log(`userObject: ${userObject}`);
+    try {
+      const user = await dbClient.usersCollection.findOne({ _id: new ObjectId(userId) });
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    if (typeof userObject !== 'object') {
-      response.status(401);
-      response.send({ error: 'Unauthorized' });
-      return;
+      return res.status(200).json({ id: user._id, email: user.email });
+    } catch (error) {
+      return res.status(500).json({ error: 'Internal server error' });
     }
-
-    response.send({ id: userObject._id, email: userObject.email });
   }
 }
 
