@@ -43,7 +43,7 @@ class AuthController {
     }
 
     await redisClient.del(`auth_${token}`);
-    return res.status(204).send();
+    return res.status(204).end();
   }
 }
 
