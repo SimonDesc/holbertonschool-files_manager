@@ -28,7 +28,7 @@ class AuthController {
     // Sinon, on génère un token de connexion
     const token = uuidv4();
     const key = `auth_${token}`;
-    console.log('key when set', key);
+    
     // On stocke le token dans Redis pour 24h
     await redisClient.set(key, user._id.toString(), 86400);
 
@@ -36,14 +36,14 @@ class AuthController {
     return res.status(200).json({ token });
   }
 
-  static getDisconnect(req, res) {
+  static async getDisconnect(req, res) {
     const token = req.headers['x-token'];
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    redisClient.del(`auth_${token}`);
-    return res.status(204).end();
+    await redisClient.del(`auth_${token}`);
+    return res.status(204).send();
   }
 }
 
