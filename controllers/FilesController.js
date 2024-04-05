@@ -31,24 +31,20 @@ class FilesController {
     const userObject = await dbClient.userById(userId);
     // console.log('userobject:', userObject);
     if (!userObject) {
-      response.status(500);
-      response.send({ error: 'Failed to get user from ID' });
+      response.status(401);
+      response.send({ error: 'Unauthorized' });
       return;
     }
 
     // On construit l'objet fichier
     const fileObject = {
-      name: request.body.name,
-      type: request.body.type,
-      isPublic: request.body.isPublic,
-      parentId: request.body.parentId || 0,
-      userId: userObject._id,
+      name: request.body.name, // filename
+      type: request.body.type, // folder, file or image
+      isPublic: request.body.isPublic || false, // True, False(default)
+      parentId: request.body.parentId || 0, // O-> the root
+      userId: userObject._id, // The user ID should be added to the document saved in DB - as owner of a file
     };
 
-    // Si le fichier n'est pas public, on le met à false
-    if (fileObject.isPublic !== true) {
-      fileObject.isPublic = false;
-    }
 
     // Checks sur les propriétés de l'objet fichier
     if (typeof fileObject.name !== 'string') {
@@ -84,7 +80,7 @@ class FilesController {
     }
 
     // Si notre fileObject n'est pas un dossier
-    // Donc image ou autre...
+    // Donc image ou file
     if (fileObject.type !== 'folder') {
       // On définie le chemin d'enregistrement
       const fileDir = process.env.FOLDER_PATH || '/tmp/files_manager/';

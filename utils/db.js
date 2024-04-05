@@ -45,8 +45,6 @@ class DBClient {
 
       return await this.usersCollection.findOne({ _id });
     } catch (error) {
-      // Gérer l'erreur ou retourner null / message d'erreur
-      console.error('Invalid ID format:', error);
       return null;
     }
   }
